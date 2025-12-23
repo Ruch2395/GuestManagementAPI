@@ -13,8 +13,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.OpenApiInfo { Title = "Guest Management API", Version = "v1" });
-
+    c.SwaggerDoc("v1", new() { Title = "Guest Management API", Version = "v1" });
 });
 
 // Register DbContext (in-memory provider omitted so project builds without extra package)
