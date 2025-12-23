@@ -1,9 +1,8 @@
-﻿
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
-namespace GuestManagementAPI.DTOs
+namespace GuestManagementAPI.Models
 {
-    public class UpdateReservationDto
+    public class UpdateReservation
     {
         [Required]
         public string GuestName { get; set; } = default!;

@@ -1,154 +1,96 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using GuestManagementAPI.Data.Repositories;
+﻿using GuestManagementAPI.Data.Repositories;
 using GuestManagementAPI.DTOs;
 using GuestManagementAPI.Models;
 
 namespace GuestManagementAPI.Services
 {
-    public class ReservationService : IReservationService
+    public class ReservationService(IReservationRepository _repository) : IReservationService
     {
-        private readonly IReservationRepository _repository;
 
-        public ReservationService(IReservationRepository repository)
+        public async Task<ReservationDto> CreateAsync(ReservationDto dto, CancellationToken ct)
         {
-            _repository = repository;
-        }
-
-        public async Task<ReservationResponseDto> CreateAsync(CreateReservationDto dto)
-        {
+            dto.Status = ReservationStatus.Pending;
             if (dto.CheckOutDate <= dto.CheckInDate)
                 throw new InvalidOperationException("Check-out date must be after check-in date.");
 
-            var reservation = new Reservation
-            {
-                Id = Guid.NewGuid(),
-                GuestName = dto.GuestName,
-                GuestEmail = dto.GuestEmail,
-                RoomNumber = dto.RoomNumber,
-                CheckInDate = dto.CheckInDate,
-                CheckOutDate = dto.CheckOutDate,
-                NumberOfGuests = dto.NumberOfGuests,
-                Status = ReservationStatus.Pending,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-
-            await _repository.AddAsync(reservation);
-            return MapToDto(reservation);
+             return await _repository.AddAsync(dto, ct);
         }
 
-        public async Task<IEnumerable<ReservationResponseDto>> GetAllAsync(
+        public async Task<IEnumerable<ReservationDto>> GetAllAsync(
             string? status,
             string? roomNumber,
             string? sortBy,
-            string? order)
+            string? order, CancellationToken ct)
         {
-            var reservations = await _repository.GetAllAsync();
-
-            if (!string.IsNullOrWhiteSpace(status) &&
-                Enum.TryParse<ReservationStatus>(status, true, out var parsedStatus))
-            {
-                reservations = reservations.Where(r => r.Status == parsedStatus);
-            }
-
-            if (!string.IsNullOrWhiteSpace(roomNumber))
-            {
-                reservations = reservations.Where(r => r.RoomNumber == roomNumber);
-            }
-
-            reservations = sortBy?.ToLower() switch
-            {
-                "checkindate" => order == "desc"
-                    ? reservations.OrderByDescending(r => r.CheckInDate)
-                    : reservations.OrderBy(r => r.CheckInDate),
-                _ => reservations
-            };
-
-            return reservations.Select(MapToDto);
+            return await _repository.GetAllAsync(status,roomNumber,sortBy,order, ct);
         }
 
-        public async Task<ReservationResponseDto> GetByIdAsync(Guid id)
+        public async Task<ReservationDto> GetByIdAsync(Guid id, CancellationToken ct)
         {
-            var reservation = await GetReservationOrThrow(id);
-            return MapToDto(reservation);
+            return await GetReservationOrThrow(id, ct);
         }
 
-        public async Task<ReservationResponseDto> UpdateAsync(Guid id, UpdateReservationDto dto)
+        public async Task<ReservationDto> UpdateAsync(Guid id, ReservationDto dto, CancellationToken ct)
         {
-            var reservation = await GetReservationOrThrow(id);
-
+            var reservation = await GetReservationOrThrow(id, ct);
+            dto.Status = reservation.Status;
             if (reservation.Status != ReservationStatus.Pending)
                 throw new InvalidOperationException("Only pending reservations can be updated.");
-
-            reservation.GuestName = dto.GuestName;
-            reservation.GuestEmail = dto.GuestEmail;
-            reservation.RoomNumber = dto.RoomNumber;
-            reservation.CheckInDate = dto.CheckInDate;
-            reservation.CheckOutDate = dto.CheckOutDate;
-            reservation.NumberOfGuests = dto.NumberOfGuests;
-            reservation.UpdatedAt = DateTime.UtcNow;
-
-            await _repository.UpdateAsync(reservation);
-            return MapToDto(reservation);
+            
+            return await _repository.UpdateAsync(id,dto, ct);
         }
 
-        public async Task CheckInAsync(Guid id)
+        public async Task CheckInAsync(Guid id, CancellationToken ct)
         {
-            var reservation = await GetReservationOrThrow(id);
+            var reservation = await GetReservationOrThrow(id, ct);
 
             if (reservation.Status != ReservationStatus.Pending)
                 throw new InvalidOperationException("Only pending reservations can be checked in.");
+            ReservationDto updateReservationDto = UpdateStatus(reservation, ReservationStatus.CheckedIn);
 
-            reservation.Status = ReservationStatus.CheckedIn;
-            reservation.UpdatedAt = DateTime.UtcNow;
-
-            await _repository.UpdateAsync(reservation);
+            await _repository.UpdateAsync(id, updateReservationDto, ct);
         }
 
-        public async Task CheckOutAsync(Guid id)
+       
+
+        public async Task CheckOutAsync(Guid id, CancellationToken ct)
         {
-            var reservation = await GetReservationOrThrow(id);
+            var reservation = await GetReservationOrThrow(id, ct);
 
             if (reservation.Status != ReservationStatus.CheckedIn)
                 throw new InvalidOperationException("Only checked-in reservations can be checked out.");
-
-            reservation.Status = ReservationStatus.CheckedOut;
-            reservation.UpdatedAt = DateTime.UtcNow;
-
-            await _repository.UpdateAsync(reservation);
+            ReservationDto updateReservationDto = UpdateStatus(reservation, ReservationStatus.CheckedOut);
+            
+            await _repository.UpdateAsync(id,updateReservationDto, ct);
         }
 
-        public async Task CancelAsync(Guid id)
+        public async Task CancelAsync(Guid id, CancellationToken ct)
         {
-            var reservation = await GetReservationOrThrow(id);
+            var reservation = await GetReservationOrThrow(id, ct);
 
-            reservation.Status = ReservationStatus.Cancelled;
-            reservation.UpdatedAt = DateTime.UtcNow;
-
-            await _repository.UpdateAsync(reservation);
+            ReservationDto updateReservationDto = UpdateStatus(reservation, ReservationStatus.Cancelled);
+            
+            await _repository.UpdateAsync(id, updateReservationDto, ct);
         }
 
-        private async Task<Reservation> GetReservationOrThrow(Guid id)
+        private async Task<ReservationDto> GetReservationOrThrow(Guid id, CancellationToken ct)
         {
-            var reservation = await _repository.GetByIdAsync(id);
+            var reservation = await _repository.GetByIdAsync(id, ct);
             return reservation ?? throw new KeyNotFoundException("Reservation not found.");
         }
 
-        private static ReservationResponseDto MapToDto(Reservation r)
+        private static ReservationDto UpdateStatus(ReservationDto reservation, ReservationStatus reservationStatus)
         {
-            return new ReservationResponseDto
+            return new ReservationDto
             {
-                Id = r.Id,
-                GuestName = r.GuestName,
-                GuestEmail = r.GuestEmail,
-                RoomNumber = r.RoomNumber,
-                CheckInDate = r.CheckInDate,
-                CheckOutDate = r.CheckOutDate,
-                NumberOfGuests = r.NumberOfGuests,
-                Status = r.Status.ToString()
+                Id = reservation.Id,
+                GuestName = reservation.GuestName,
+                GuestEmail = reservation.GuestEmail,
+                RoomNumber = reservation.RoomNumber,
+                CheckInDate = reservation.CheckInDate,
+                CheckOutDate = reservation.CheckOutDate,
+                NumberOfGuests = reservation.NumberOfGuests,
+                Status = reservationStatus,
             };
         }
     }

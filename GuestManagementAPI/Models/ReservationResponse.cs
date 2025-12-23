@@ -1,6 +1,6 @@
-﻿namespace GuestManagementAPI.DTOs
+﻿namespace GuestManagementAPI.Models
 {
-    public class ReservationResponseDto
+    public class ReservationResponse
     {
         public Guid Id { get; set; }
         public string GuestName { get; set; } = default!;

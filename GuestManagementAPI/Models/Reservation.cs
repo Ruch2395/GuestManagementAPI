@@ -1,17 +1,28 @@
-﻿namespace GuestManagementAPI.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace GuestManagementAPI.Models
 {
-    public record Reservation
+    public record ReservationRequest
     {
-        public Guid Id { get; set; }
-        public string GuestName { get; set; }
-        public string GuestEmail { get; set; }
-        public string RoomNumber { get; set; }
+        [Required]
+        public string GuestName { get; set; } = default!;
+
+        [Required]
+        [EmailAddress]
+        public string GuestEmail { get; set; } = default!;
+
+        [Required]
+        public string RoomNumber { get; set; } = default!;
+
+        [Required]
         public DateTime CheckInDate { get; set; }
+
+        [Required]
         public DateTime CheckOutDate { get; set; }
-        public ReservationStatus Status { get; set; }
+
+        [Range(1, 10)]
         public int NumberOfGuests { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
+        
     }
 
 }
