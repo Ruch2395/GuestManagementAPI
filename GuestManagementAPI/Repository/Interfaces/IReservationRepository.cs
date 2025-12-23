@@ -1,13 +1,18 @@
 ﻿
 using global::GuestManagementAPI.Models;
+using GuestManagementAPI.DTOs;
+using GuestManagementAPI.Repository.Models;
 
 namespace GuestManagementAPI.Data.Repositories
 {
     public interface IReservationRepository
     {
-        Task AddAsync(Reservation reservation);
-        Task<IEnumerable<Reservation>> GetAllAsync();
-        Task<Reservation?> GetByIdAsync(Guid id);
-        Task UpdateAsync(Reservation reservation);
+        Task<ReservationDto> AddAsync(ReservationDto reservation, CancellationToken ct);
+        Task<IEnumerable<ReservationDto>> GetAllAsync(string? status,
+            string? roomNumber,
+            string? sortBy,
+            string? order, CancellationToken ct);
+        Task<ReservationDto?> GetByIdAsync(Guid id, CancellationToken ct);
+        Task<ReservationDto> UpdateAsync(Guid id, ReservationDto reservation, CancellationToken ct);
     }
 }

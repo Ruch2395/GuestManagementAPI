@@ -1,6 +1,7 @@
+using GuestManagementAPI.Models;
+using GuestManagementAPI.Repository.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.InMemory;
-using GuestManagementAPI.Models;
 
 
 namespace GuestManagementAPI.Data
@@ -12,6 +13,6 @@ namespace GuestManagementAPI.Data
            
         }
 
-        public DbSet<Reservation> Reservations { get; set; } = default!;
+        public DbSet<ReservationDBModel> Reservations { get; set; } = default!;
     }
 }
